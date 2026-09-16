@@ -1,2 +1,2 @@
-# tomolists
+# lists.md
 lists for myself
