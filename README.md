@@ -1,3 +1,5 @@
 # lists.md
 
-lists for myself
+markdown lists for myself
+
+http://dev.iamtomo.com/lists
