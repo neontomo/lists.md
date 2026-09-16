@@ -12,7 +12,7 @@ const is = {
 	h1: (line) => line?.match(/^#\s/),
 	h2: (line) => line?.match(/^##\s/),
 	h3: (line) => line?.match(/^###\s/),
-	item: (line) => line?.match(/^-(\s|)\[(\s|)\]\s/),
+	item: (line) => line?.match(/^-(\s|)\[(\s|x|-|)\]\s/),
 	description: (line) =>
 		!is.item(line) && !is.import(line) && line?.match(/^-\s/),
 	comment: (line) => line?.match(/^\/\/\s/),
@@ -63,15 +63,16 @@ const getFromFile = (fileName) => {
 				if (is.h3(line))
 					ce.h3({ innerHTML: line?.replace(/^###\s/gi, "") }, getLastSection());
 				if (is.item(line)) {
+					const fillType = line?.match(/^-(\s|)\[x\]\s/) ? 'full' : line?.match(/^-(\s|)\[-\]\s/) ? 'half' : 'default'
 					const checkboxContent = line
-						?.replace(/^-(\s|)\[(\s|)\]\s/gi, "")
+						?.replace(/^-(\s|)\[(\s|x|-|)\]\s/gi, "")
 						?.trim();
 
 					if (!checkboxContent) return;
 
 					const container = ce.div({ className: "checkbox-container" });
 
-					createCheckbox(container);
+					createCheckbox(fillType, container);
 					ce.div({ innerHTML: checkboxContent }, container);
 
 					getLastSection().appendChild(container);
