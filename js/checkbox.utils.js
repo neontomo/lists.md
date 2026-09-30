@@ -10,18 +10,12 @@ const toggleCheckbox = (checkbox) => {
 	checkbox.classList.replace(fillType, nextFillType);
 };
 
-const hydrateCheckboxes = () => {
-	const checkboxes = document.querySelectorAll(".checkbox");
-	checkboxes.forEach((checkbox) => {
-		checkbox.addEventListener("click", () => toggleCheckbox(checkbox));
-	});
-};
-
 const createCheckbox = (fillType = "default", title, appendTo = undefined) => {
 	const container = ce.div({ className: "checkbox-container" }, appendTo);
 
 	const checkbox = ce.div({ className: `checkbox ${fillType}` }, container);
-	checkbox.addEventListener("click", () => toggleCheckbox(checkbox));
+	// checkbox.addEventListener("click", () => toggleCheckbox(checkbox));
+	checkbox.setAttribute("onClick", "toggleCheckbox(this)");
 
 	container.appendChild(document.createTextNode(title));
 

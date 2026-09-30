@@ -55,8 +55,6 @@ const getFromFile = async (fileName) => {
 
 	if (!html) return;
 	ce.section({ innerHTML: html }, main);
-
-	hydrateCheckboxes();
 };
 
 const { id } = getParams();
