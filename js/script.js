@@ -1,4 +1,13 @@
+const isLocalhost = location.hostname === "localhost";
+const entrypoint = isLocalhost ? "md/lists.private.md" : "md/lists.md";
 const main = document.getElementsByTagName("main")[0];
+
+let busy = false;
+
+const makeHtml = (markdown) => {
+	const markdownOptions = { tasklists: false };
+	return new showdown.Converter(markdownOptions).makeHtml(markdown);
+};
 
 const getParams = () => {
 	const params = new URLSearchParams(document.location.search);
@@ -7,104 +16,72 @@ const getParams = () => {
 	return { id };
 };
 
-const is = {
-	import: (line) => line?.match(/^import:/),
-	h1: (line) => line?.match(/^#\s/),
-	h2: (line) => line?.match(/^##\s/),
-	h3: (line) => line?.match(/^###\s/),
-	item: (line) => line?.match(/^-(\s|)\[(\s|x|-|)\]\s/),
-	description: (line) =>
-		!is.item(line) && !is.import(line) && line?.match(/^-\s/),
-	comment: (line) => line?.match(/^\/\/\s/),
+const getMarkdownFromFile = async (fileName) =>
+	await fetch(`md/${fileName}.md`).then((response) => response.text());
+
+const setTitle = (markdown) => {
+	const title = markdown.split(/^# (.*)/)[1];
+	if (title) document.querySelector("h1").innerHTML = title;
 };
 
-const getSectionsContainer = () => {
-	const sectionsContainers =
-		document.getElementsByClassName("sections-container");
-
-	if (sectionsContainers?.length) {
-		return sectionsContainers[0];
-	} else {
-		return ce.div({ className: "sections-container" });
+const getFromFile = async (fileName) => {
+	if (busy) {
+		requestAnimationFrame(() => getFromFile(fileName));
+		return;
 	}
-};
 
-const getLastSection = () => {
-	const sections = document.getElementsByTagName("section");
-	return sections[sections.length - 1];
-};
+	busy = true;
 
-const getFromFile = (fileName) => {
-	fetch(`md/${fileName}.md`)
-		.then((response) => response.text())
-		.then((data) => {
-			data.split("\n").forEach((line) => {
-				if (is.import(line)) {
-					const fileName = line?.replace(/^import:/gi, "")?.trim();
+	const markdown = await getMarkdownFromFile(fileName);
 
-					getFromFile(fileName);
-				}
-				if (is.h1(line)) {
-					const headingContent = line?.replace(/^#\s/gi, "")?.trim();
+	setTitle(markdown);
 
-					if (!headingContent) return;
-					ce.h1({ innerHTML: headingContent }, main);
-					document.getElementsByTagName("title")[0].innerHTML =
-						`tomolists - ${headingContent}`;
-				}
-				if (is.h2(line)) {
-					const sectionsContainer = getSectionsContainer();
+	const formattedMarkdown = markdown
+		.replace(/^# (.*)\n/gi, "")
+		.replace(/(^|\n)import:(.*)($|\n)/gi, (line) => {
+			const importName = line.replace(/(^|\n)import:(.*)($|\n)/gi, "$2");
+			getFromFile(importName);
+			return "";
+		})
+		.replace(/- \[( |x|-|)\] .*/gi, (line) => {
+			const fillType = getCheckboxFillType(line);
+			const title = getCheckboxTitle(line);
 
-					const section = ce.section({}, sectionsContainer);
-					ce.h2({ innerHTML: line?.replace(/^##\s/gi, "") }, section);
-
-					main.appendChild(sectionsContainer);
-				}
-				if (is.h3(line))
-					ce.h3({ innerHTML: line?.replace(/^###\s/gi, "") }, getLastSection());
-				if (is.item(line)) {
-					const fillType = line?.match(/^-(\s|)\[x\]\s/) ? 'full' : line?.match(/^-(\s|)\[-\]\s/) ? 'half' : 'default'
-					const checkboxContent = line
-						?.replace(/^-(\s|)\[(\s|x|-|)\]\s/gi, "")
-						?.trim();
-
-					if (!checkboxContent) return;
-
-					const container = ce.div({ className: "checkbox-container" });
-
-					createCheckbox(fillType, container);
-					ce.div({ innerHTML: checkboxContent }, container);
-
-					getLastSection().appendChild(container);
-				}
-				if (is.description(line)) {
-					const content = line?.replace(/^-\s/gi, "")?.trim();
-
-					if (!content) return;
-
-					ce.div(
-						{ innerHTML: content, className: "description" },
-						getLastSection(),
-					);
-				}
-			});
+			return createCheckbox(fillType, title).outerHTML;
 		});
+
+	const html = makeHtml(formattedMarkdown);
+	busy = false;
+
+	if (!html) return;
+	ce.section({ innerHTML: html }, main);
+
+	hydrateCheckboxes();
 };
 
 const { id } = getParams();
 
 if (id) {
-	getFromFile(id);
+	getFromFile(id).finally(() => {
+		const checkboxes = document.querySelectorAll(".checkbox");
+		checkboxes.forEach((checkbox) => {
+			checkbox.addEventListener("click", () => toggleCheckbox(checkbox));
+		});
+	});
 } else {
-	fetch(`md/lists.md`)
+	fetch(entrypoint)
 		.then((response) => response.text())
-		.then((data) => {
-			ce.h1({ innerHTML: "tomolists" }, main);
+		.then((markdown) => {
+			const listContainer = ce.div({}, main);
 
-			data.split("\n").forEach((line) => {
+			markdown.split("\n").forEach((line) => {
 				ce.a(
-					{ innerHTML: line, href: `?id=${line}`, className: "list-link" },
-					main,
+					{
+						innerHTML: line,
+						href: `?id=${line}`,
+						className: "list-link",
+					},
+					listContainer,
 				);
 			});
 		});
