@@ -1,3 +1,9 @@
+const fetchOptions = {
+	cache: "no-cache",
+};
+const markdownOptions = {
+	tasklists: false,
+};
 const isLocalhost = location.hostname === "localhost";
 const entrypoint = isLocalhost ? "md/lists.private.md" : "md/lists.md";
 const main = document.getElementsByTagName("main")[0];
@@ -5,7 +11,6 @@ const main = document.getElementsByTagName("main")[0];
 let busy = false;
 
 const makeHtml = (markdown) => {
-	const markdownOptions = { tasklists: false };
 	return new showdown.Converter(markdownOptions).makeHtml(markdown);
 };
 
@@ -17,7 +22,9 @@ const getParams = () => {
 };
 
 const getMarkdownFromFile = async (fileName) =>
-	await fetch(`md/${fileName}.md`).then((response) => response.text());
+	await fetch(`md/${fileName}.md`, fetchOptions).then((response) =>
+		response.text(),
+	);
 
 const setTitle = (markdown) => {
 	const title = markdown.split(/^# (.*)/)[1];
@@ -67,7 +74,7 @@ if (id) {
 		});
 	});
 } else {
-	fetch(entrypoint)
+	fetch(entrypoint, fetchOptions)
 		.then((response) => response.text())
 		.then((markdown) => {
 			const listContainer = ce.div({}, main);
